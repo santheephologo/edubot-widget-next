@@ -471,7 +471,9 @@
   clear: both;
   z-index: 999;
 }
-
+.chat_bot_main__mx_msg_item {
+  white-space: pre-line;
+}
 .chat_bot_main__mx .chat_bot_main__mx_converse .chat_bot_main__mx_msg_item .chat_bot_main__mx_avatar {
   position: absolute;
   top: 0;
