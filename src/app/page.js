@@ -13,10 +13,10 @@ export default function Home() {
   
   return (<>
     <button onClick={handleToggle}>Hiiiii</button>
-    <ChatWidget bot_id={"c1c51700-d05b-11ed-a1eb-0242ac120002"} user_id={"0004f939-9eb1-4b77-aa4a-2686d046d680"} nickname={"Mr.Bot"} toggle={isFabOpen} />
+    <ChatWidget bot_id={"c1c51700-d05b-11ed-a1eb-0242ac120002"} user_id={"b968a9b8-a715-40b1-aa00-5e5e5cc1e190"} nickname={"Mr.PS3"} toggle={isFabOpen} />
     </>
   );
 }
 
-export const base_URL = "http://127.0.0.1:8000/api/ai"
+export const base_URL = "http://127.0.0.1:8000/api"
 export const socket_URL = "ws://localhost:4000"

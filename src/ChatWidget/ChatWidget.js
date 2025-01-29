@@ -7,11 +7,11 @@ import { MdHistory } from "react-icons/md";
 import { AiOutlineCloseCircle } from "react-icons/ai";
 import HistoryRow from "./HistoryRow";
 import axios from "axios";
-import { base_URL, socket_URL } from "@/app/page";
 import BotMsg from "./BotMsg";
 import UserMsg from "./UserMsg";
+import { formatNumber, formatTokenNumber } from "./utils/CommonFuncs";
 
-const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
+const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {  
   const [socket, setSocket] = useState(null);
   const [sessionId, setSessionId] = useState("");
   const [threadId, setThreadId] = useState("");
@@ -28,6 +28,8 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
   const [connectionError, setConnectionError] = useState(false);
   const chatboxRef = useRef(null);
   const [fetchChatList, setFetchChatList] = useState(true);
+  const [remainingTokens, setRemainingTokens] = useState(0);
+  const [viewRemainingTokens, setViewRemainingTokens] = useState(false);
 
   useEffect(() => {
     if (user_id && bot_id) {
@@ -48,8 +50,8 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
   const fetchChatThread = async (sessionId) => {
     try {
       if (sessionId !== "") {
-        const response = await axios.get(`${base_URL}/chat/${sessionId}`);
-        console.log(response.data);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_HOST}/api/ai/chat/${sessionId}`);
+        // console.log(response.data);
         setMessages(response.data.messages);
       }
     } catch (error) {
@@ -62,9 +64,9 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
       try {
         if (sessionId === "" && fetchChatList) {
           const response = await axios.get(
-            `${base_URL}/chat/list/${user_id}/${bot_id}`
+            `${process.env.NEXT_PUBLIC_HOST}/api/ai/chat/list/${user_id}/${bot_id}`
           );
-          console.log("chat list ", response.data.chats);
+          // console.log("chat list ", response.data.chats);
           setChatList(response.data.chats);
           setFetchChatList(false);
         }
@@ -75,24 +77,28 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
     fetchChatList();
   }, [fetchChatList]);
 
+
   useEffect(() => {
-    const ws = new WebSocket(socket_URL);
+    const ws = new WebSocket(process.env.NEXT_PUBLIC_SOCKET_HOST);
     // Connect to the WebSocket server
     ws.onopen = () => {
       setConnectionError(false);
       console.log("WebSocket connected");
+
     };
 
     ws.onmessage = (event) => {
       // console.log('data ', event.data)
       const parsedData = JSON.parse(event.data);
-      console.log("message ", parsedData);
-      if (event.data.sessionId !== sessionId) {
+      // console.log("message ", parsedData);
+      if (parsedData.sessionId !== sessionId) {
+        // console.log(" setting session id", sessionId, parsedData.sessionId, event.data.sessionId)
         setSessionId(parsedData.sessionId);
         setThreadId(parsedData.threadId);
       }
       setTyping(false);
-
+      setRemainingTokens(parsedData.tokens_remaining);
+      setViewRemainingTokens(true)
       const newMessage = parsedData.message;
       // console.log("received ", event.data)
       addMessage("Bot", newMessage);
@@ -106,11 +112,22 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
     return () => {
       ws.close();
     };
+   
   }, []);
+
+  useEffect(() => {
+    if (viewRemainingTokens) {
+      const timer = setTimeout(() => {
+        setViewRemainingTokens(false);
+      }, 6000); 
+
+      return () => clearTimeout(timer); 
+    }
+  }, [viewRemainingTokens]);
 
   const addMessage = (sender, message) => {
     setMessages((prevMessages) => [...prevMessages, { sender, message }]);
-    console.log(messages);
+    // console.log(messages);
   };
 
   const sendMessage = (message) => {
@@ -142,6 +159,7 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
       e.preventDefault();
       sendMessage(input);
       setInput("");
+      // console.log("sss ", sessionId)
     }
   };
 
@@ -206,7 +224,7 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
               </div>
               <div className="chat_bot_main__mx_name">
                 <span id="chat_bot_main__mx_head">{nickname}</span>
-                {!typing && (
+                {!typing && !viewRemainingTokens && (
                   <>
                     {" "}
                     <br />{" "}
@@ -216,10 +234,20 @@ const ChatWidget = ({ bot_id, user_id, nickname, toggle }) => {
                     <span className="online"></span>
                   </>
                 )}
-                {typing && (
+                {typing && !viewRemainingTokens &&(
                   <div className="type_loader_container">
                     <div className="typing_loader"></div>
                   </div>
+                )}
+                {!typing && viewRemainingTokens && (
+                  <>
+                    {" "}
+                    <br />{" "}
+                    <span className="agent type_loader_container">
+                      {remainingTokens<1000000?formatNumber(remainingTokens):formatTokenNumber(remainingTokens)} tokens left
+                    </span>{" "}
+                    <span className="online"></span>
+                  </>
                 )}
               </div>
             </div>
